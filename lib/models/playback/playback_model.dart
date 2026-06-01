@@ -165,16 +165,24 @@ class PlaybackModelHelper {
     ref.read(videoPlayerProvider).pause();
     ref.read(mediaPlaybackProvider.notifier).update((state) => state.copyWith(buffering: true));
     final currentModel = ref.read(playBackModel);
+    final currentItemId = currentModel?.item.id;
+    final currentQueue = currentModel?.playbackQueue;
+    final updatedQueue = (currentItemId != null && currentQueue != null)
+        ? currentQueue.advanceFromCurrentTo(currentItemId, newItem.id)
+        : null;
+    final modelForTransition = (updatedQueue != null && currentModel != null)
+        ? currentModel.updatePlaybackQueue(updatedQueue)
+        : currentModel;
     final newModel = (await createPlaybackModel(
           null,
           newItem,
-          oldModel: currentModel,
+          oldModel: modelForTransition,
         )) ??
         await _createOfflinePlaybackModel(
           newItem,
           null,
           await ref.read(syncProvider.notifier).getSyncedItem(newItem.id),
-          oldModel: currentModel,
+          oldModel: modelForTransition,
         );
     if (newModel == null) return null;
     ref.read(videoPlayerProvider.notifier).loadPlaybackItem(newModel, Duration.zero);
